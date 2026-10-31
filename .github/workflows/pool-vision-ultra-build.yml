@@ -18,10 +18,14 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
-      - uses: android-actions/setup-android@v3
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '8.9'
+      - name: Check Android SDK
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          ls -al "$ANDROID_HOME/platforms" || true
+          ls -al "$ANDROID_HOME/build-tools" || true
       - name: Build debug APK
         shell: bash
         run: |
@@ -51,8 +55,9 @@ jobs:
         shell: bash
         run: |
           if [ -f pool-vision/build.log ]; then
-            TAIL="$(tail -c 3800 pool-vision/build.log)"
+            TAIL="$(tail -n 45 pool-vision/build.log)"
           else
-            TAIL="Build log not available: failed in setup steps or job did not reach gradle."
+            TAIL="Build failed before Gradle could run."
           fi
-          gh api --method POST "repos/$REPO/issues/$PR_NUM/comments" -f body="Pool Vision Ultra build result:\n```\n$TAIL\n```" || true
+          MESSAGE="$(printf 'Pool Vision build result:\n%s' "$TAIL")"
+          gh api --method POST "repos/$REPO/issues/$PR_NUM/comments" -f body="$MESSAGE" || true
